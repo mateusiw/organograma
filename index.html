@@ -121,17 +121,25 @@
   <!-- Modal Estatísticas -->
   <div id="stats-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[70] hidden items-center justify-center p-4">
     <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden transform transition-all flex flex-col max-h-[80vh]">
-      <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-        <div>
-          <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-            <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-            Estatísticas da Empresa
-          </h3>
-          <p class="text-xs text-slate-500 mt-1">Total de colaboradores: <span id="total-colab" class="font-bold text-slate-700">0</span></p>
+      <div class="p-6 border-b border-slate-100 bg-slate-50">
+        <div class="flex justify-between items-start mb-4">
+          <div>
+            <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+              <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+              Métricas da Organização
+            </h3>
+            <p class="text-xs text-slate-500 mt-1">Total de colaboradores: <span id="total-colab" class="font-bold text-slate-700">0</span></p>
+          </div>
+          <button onclick="fecharStatsModal()" class="text-slate-400 hover:text-slate-700 p-2 -mr-2 -mt-2 rounded-lg hover:bg-slate-200 transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+          </button>
         </div>
-        <button onclick="fecharStatsModal()" class="text-slate-400 hover:text-slate-700 p-2 rounded-lg hover:bg-slate-200 transition-colors">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-        </button>
+        
+        <!-- Abas de Filtro -->
+        <div class="flex gap-2 bg-slate-200/50 p-1 rounded-lg">
+          <button id="tab-empresa" onclick="gerarEstatisticas('empresa')" class="flex-1 py-1.5 px-3 text-xs font-bold rounded-md bg-white text-slate-700 shadow-sm border border-slate-200 transition-all">Por Empresa</button>
+          <button id="tab-cargo" onclick="gerarEstatisticas('cargo')" class="flex-1 py-1.5 px-3 text-xs font-bold rounded-md text-slate-500 hover:text-slate-700 transition-all">Por Cargo</button>
+        </div>
       </div>
       <div class="p-0 overflow-y-auto flex-1 bg-white">
         <div id="stats-list" class="divide-y divide-slate-100">
@@ -161,11 +169,6 @@
       <!-- Botão Modo Compacto -->
       <button onclick="toggleCompactMode()" id="btn-compact" class="bg-white p-2 flex items-center gap-2 rounded-lg shadow-sm border border-slate-200 text-slate-600 hover:text-emerald-600 hover:bg-emerald-50 transition" title="Alternar Modo Compacto">
         <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
-      </button>
-
-      <!-- Botão Exportar PDF -->
-      <button onclick="exportarParaPDF()" class="bg-white p-2 flex items-center gap-2 rounded-lg shadow-sm border border-slate-200 text-slate-600 hover:text-red-600 hover:bg-red-50 transition" title="Exportar PDF">
-        <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path></svg>
       </button>
 
       <!-- Botão Estatísticas -->
@@ -281,6 +284,8 @@
     </aside>
 
     <main id="main-content" class="flex-1 overflow-auto p-4 sm:p-12 relative block pt-8 sm:pt-10 cursor-grab">
+      <div id="floating-actions" class="absolute top-6 left-6 flex gap-3 z-50 hidden-for-pdf">
+      </div>
       <div class="tree mt-2 transition-transform duration-300 origin-top w-max min-w-full mx-auto px-4 sm:px-10 pb-20 flex justify-center" id="tree-container"></div>
     </main>
 
@@ -446,7 +451,7 @@
     function abrirStatsModal() {
       document.getElementById('stats-modal').classList.remove('hidden');
       document.getElementById('stats-modal').classList.add('flex');
-      gerarEstatisticas();
+      gerarEstatisticas('empresa'); // Por padrão, abre em 'empresa'
     }
 
     function fecharStatsModal() {
@@ -466,9 +471,9 @@
       }
     };
 
-    window.toggleAccordion = function(empresaId) {
-      const content = document.getElementById(`content-${empresaId}`);
-      const icon = document.getElementById(`icon-${empresaId}`);
+    window.toggleAccordion = function(id) {
+      const content = document.getElementById(`content-${id}`);
+      const icon = document.getElementById(`icon-${id}`);
       if (content.classList.contains('hidden')) {
         content.classList.remove('hidden');
         icon.classList.add('rotate-180');
@@ -637,67 +642,97 @@
       return count;
     }
 
-    function gerarEstatisticas() {
+    function gerarEstatisticas(modo = 'empresa') {
       const statsList = document.getElementById('stats-list');
       const totalColab = document.getElementById('total-colab');
       
+      // Controla a aparência das abas
+      const tabEmpresa = document.getElementById('tab-empresa');
+      const tabCargo = document.getElementById('tab-cargo');
+      const activeClass = "flex-1 py-1.5 px-3 text-xs font-bold rounded-md bg-white text-slate-700 shadow-sm border border-slate-200 transition-all";
+      const inactiveClass = "flex-1 py-1.5 px-3 text-xs font-bold rounded-md text-slate-500 hover:text-slate-700 transition-all";
+
+      if (tabEmpresa && tabCargo) {
+        if (modo === 'empresa') {
+          tabEmpresa.className = activeClass;
+          tabCargo.className = inactiveClass;
+        } else {
+          tabCargo.className = activeClass;
+          tabEmpresa.className = inactiveClass;
+        }
+      }
+
       totalColab.textContent = orgData.length;
-      const orgPorEmpresa = {};
+      const dadosAgrupados = {};
 
       orgData.forEach(node => {
-        const empresas = node.empresa 
-          ? node.empresa.split(',').map(e => e.trim()).filter(e => e.length > 0)
-          : ['Sem Local Definido'];
+        if (modo === 'empresa') {
+          const chaves = node.empresa 
+            ? node.empresa.split(',').map(e => e.trim()).filter(e => e.length > 0)
+            : ['Sem Local Definido'];
 
-        empresas.forEach(emp => {
-          if (!orgPorEmpresa[emp]) { orgPorEmpresa[emp] = []; }
-          orgPorEmpresa[emp].push(node);
-        });
+          chaves.forEach(chave => {
+            if (!dadosAgrupados[chave]) { dadosAgrupados[chave] = []; }
+            dadosAgrupados[chave].push(node);
+          });
+        } else {
+          // Trata agrupamento por Cargo
+          const chave = node.title && node.title.trim() !== '' ? node.title.trim().toUpperCase() : 'SEM CARGO DEFINIDO';
+          if (!dadosAgrupados[chave]) { dadosAgrupados[chave] = []; }
+          dadosAgrupados[chave].push(node);
+        }
       });
 
-      const empresasOrdenadas = Object.keys(orgPorEmpresa).sort((a, b) => {
-        if (a === 'Sem Local Definido') return 1;
-        if (b === 'Sem Local Definido') return -1;
+      const chavesOrdenadas = Object.keys(dadosAgrupados).sort((a, b) => {
+        if (a === 'Sem Local Definido' || a === 'SEM CARGO DEFINIDO') return 1;
+        if (b === 'Sem Local Definido' || b === 'SEM CARGO DEFINIDO') return -1;
         return a.localeCompare(b);
       });
 
       let html = '';
       
-      empresasOrdenadas.forEach((empresa, index) => {
-        const pessoas = orgPorEmpresa[empresa];
+      chavesOrdenadas.forEach((chave, index) => {
+        const pessoas = dadosAgrupados[chave];
         pessoas.sort((a, b) => a.name.localeCompare(b.name));
 
-        const empresaId = `empresa-${index}`;
+        const groupId = `stats-group-${index}`;
 
         html += `
           <div class="border-b border-slate-100 last:border-0">
-            <button onclick="toggleAccordion('${empresaId}')" class="w-full flex justify-between items-center p-4 bg-white hover:bg-slate-50 transition-colors text-left">
+            <button onclick="toggleAccordion('${groupId}')" class="w-full flex justify-between items-center p-4 bg-white hover:bg-slate-50 transition-colors text-left">
               <div class="flex items-center gap-3">
                 <div class="bg-emerald-100 text-emerald-700 p-2 rounded-lg">
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                  ${modo === 'empresa' 
+                    ? `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>`
+                    : `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>`
+                  }
                 </div>
                 <div>
-                  <h4 class="font-bold text-slate-800 text-sm">${empresa}</h4>
+                  <h4 class="font-bold text-slate-800 text-sm">${chave}</h4>
                   <p class="text-xs text-slate-500">${pessoas.length} ${pessoas.length === 1 ? 'pessoa' : 'pessoas'}</p>
                 </div>
               </div>
-              <svg id="icon-${empresaId}" class="w-5 h-5 text-slate-400 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+              <svg id="icon-${groupId}" class="w-5 h-5 text-slate-400 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
             </button>
             
-            <div id="content-${empresaId}" class="hidden bg-slate-50 px-4 py-2 border-t border-slate-100 shadow-inner">
+            <div id="content-${groupId}" class="hidden bg-slate-50 px-4 py-2 border-t border-slate-100 shadow-inner">
               <ul class="space-y-2 py-2">
         `;
 
         pessoas.forEach(pessoa => {
           const theme = themes[pessoa.theme] || themes.blue;
+          // Inverte as informações a exibir dependendo da aba para melhor clareza
+          const badgeText = modo === 'empresa' ? pessoa.title : (pessoa.empresa || 'Sem Local');
+          const subText = modo === 'empresa' ? pessoa.sub : (pessoa.sub || 'Sem subtítulo');
+
           html += `
             <li class="flex justify-between items-center bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
               <div class="flex flex-col">
                 <span class="font-semibold text-slate-800 text-sm">${pessoa.name}</span>
-                <span class="text-xs text-slate-500">${pessoa.sub || ''}</span>
+                <span class="text-xs text-slate-500">${subText}</span>
               </div>
-              <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${theme.bg} ${theme.text}">
-                ${pessoa.title}
+              <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${theme.bg} ${theme.text} text-right">
+                ${badgeText}
               </span>
             </li>
           `;
@@ -710,11 +745,11 @@
         `;
       });
 
-      if (empresasOrdenadas.length === 0) {
+      if (chavesOrdenadas.length === 0) {
          html = `<div class="p-6 text-center text-slate-500 text-sm">Ainda não existem colaboradores registados.</div>`;
       }
 
-      statsList.innerHTML = html;
+      if(statsList) statsList.innerHTML = html;
     }
 
     async function carregarDados() {
