@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Organograma Automático - Sítio Pedra Grande</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Importando a biblioteca de exportação para PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <style>
+    /* INTELIGÊNCIA DAS LINHAS CSS */
+    .tree ul { padding-top: 24px; position: relative; display: flex; justify-content: center; transition: all 0.5s; }
+    .tree li { float: left; text-align: center; list-style-type: none; position: relative; padding: 24px 12px 0 12px; transition: all 0.5s; }
+    .tree li::before, .tree li::after { content: ''; position: absolute; top: 0; right: 50%; border-top: 2px solid #cbd5e1; width: 50%; height: 24px; }
+    .tree li::after { right: auto; left: 50%; border-left: 2px solid #cbd5e1; }
+    .tree li:only-child::after, .tree li:only-child::before { display: none; }
+    .tree li:only-child { padding-top: 0; }
+    .tree li:first-child::before, .tree li:last-child::after { border: 0 none; }
+    .tree li:last-child::before { border-right: 2px solid #cbd5e1; border-radius: 0 6px 0 0; }
+    .tree li:first-child::after { border-radius: 6px 0 0 0; }
+    .tree ul::before { content: ''; position: absolute; top: 0; left: 50%; border-left: 2px solid #cbd5e1; width: 0; height: 24px; margin-left: -1px; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    
+    /* Loading overlay */
+    #loading { display: none; }
+    #loading.active { display: flex; }
+
+    /* Classe utilitária para quando estiver arrastando a tela */
+    .grabbing { cursor: grabbing !important; user-select: none; }
+  </style>
+</head>
+<body id="body-container" class="font-sans text-slate-800 flex flex-col h-screen overflow-hidden bg-[url('https://i.imgur.com/zaP8fZ8.jpeg')] bg-cover bg-center bg-fixed">
+  
+  <!-- Overlay de Blur para o Fundo -->
+  <div class="fixed inset-0 bg-white/40 backdrop-blur-sm -z-10"></div>
+
+  <!-- Overlay de Loading -->
+  <div id="loading" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center">
+    <div class="bg-white px-6 py-4 rounded-xl shadow-lg flex items-center gap-3">
+      <svg class="animate-spin h-5 w-5 text-emerald-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+      <span id="loading-text" class="font-medium text-slate-700 text-sm">A processar...</span>
+    </div>
+  </div>
+
+  <!-- Modal de Login -->
+  <div id="login-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[70] hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden transform transition-all">
+      <div class="p-6 border-b border-slate-100">
+        <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+          <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+          Acesso Restrito
+        </h3>
+        <p class="text-xs text-slate-500 mt-1">Insira a palavra-passe para gerir o organograma.</p>
+      </div>
+      <div class="p-6">
+        <input type="password" id="senha-input" placeholder="Digite a sua palavra-passe" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition mb-4">
+        <div class="flex justify-end gap-3">
+          <button onclick="fecharLoginModal()" class="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors">
+            Cancelar
+          </button>
+          <button onclick="fazerLogin()" class="px-5 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors shadow-sm">
+            Entrar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Customizado (Avisos/Confirm) -->
+  <div id="custom-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl max-w-sm w-full overflow-hidden transform transition-all">
+      <div class="p-6">
+        <h3 id="modal-title" class="text-lg font-bold text-slate-800 mb-2">Aviso</h3>
+        <p id="modal-message" class="text-sm text-slate-600 whitespace-pre-wrap leading-relaxed">Mensagem aqui</p>
+      </div>
+      <div class="bg-slate-50 px-6 py-4 flex justify-end gap-3 border-t border-slate-100">
+        <button id="modal-btn-cancel" class="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-200 rounded-lg transition-colors hidden">
+          Cancelar
+        </button>
+        <button id="modal-btn-confirm" class="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors shadow-sm hidden">
+          Sim, excluir
+        </button>
+        <button id="modal-btn-ok" class="px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors shadow-sm hidden">
+          Entendi
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Estatísticas -->
+  <div id="stats-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[70] hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden transform transition-all flex flex-col max-h-[80vh]">
+      <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+        <div>
+          <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+            <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+            Estatísticas da Empresa
+          </h3>
+          <p class="text-xs text-slate-500 mt-1">Total de colaboradores: <span id="total-colab" class="font-bold text-slate-700">0</span></p>
+        </div>
+        <button onclick="fecharStatsModal()" class="text-slate-400 hover:text-slate-700 p-2 rounded-lg hover:bg-slate-200 transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+      <div class="p-0 overflow-y-auto flex-1 bg-white">
+        <div id="stats-list" class="divide-y divide-slate-100">
+          <!-- Conteúdo gerado dinamicamente -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BARRA DE NAVEGAÇÃO SUPERIOR -->
+  <header class="flex-none w-full bg-white shadow-sm border-b border-slate-200 z-50 flex items-center justify-between px-4 sm:px-6 py-3 hidden-for-pdf">
+    <div class="flex items-center gap-3">
+      <img src="https://i.imgur.com/nwWZpfC.png" alt="Logo SPG" class="h-8 w-auto object-contain" onerror="this.src='https://placehold.co/100x40?text=Logo+SPG'">
+      <h1 class="text-lg font-bold text-slate-800 hidden sm:block">Organograma - SPG</h1>
+    </div>
+    <div class="flex items-center gap-2 sm:gap-4 flex-wrap justify-end">
+      <!-- Botão Estatísticas -->
+      <button onclick="abrirStatsModal()" class="bg-slate-50 p-2 px-3 flex items-center gap-2 rounded-lg shadow-sm border border-slate-200 text-slate-600 hover:text-emerald-600 hover:bg-emerald-50 transition" title="Ver Estatísticas">
+        <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+        <span class="text-xs uppercase tracking-wider font-bold hidden md:block">Métricas</span>
+      </button>
+
+      <!-- Botão de Acesso (Login/Painel) -->
+      <button id="btn-acesso" onclick="handleLoginClick()" class="bg-white p-2 px-3 flex items-center gap-2 rounded-lg shadow-sm border border-slate-200 text-slate-700 hover:text-emerald-600 hover:bg-emerald-50 transition font-bold" title="Acesso Administrativo">
+        <svg id="icone-acesso" class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+        <span id="texto-acesso" class="text-xs uppercase tracking-wider hidden sm:block">Login</span>
+      </button>
+
+      <!-- Controles de Zoom -->
+      <div class="bg-white flex items-center rounded-lg shadow-sm border border-slate-200 text-slate-600">
+        <button onclick="zoomOut()" class="p-1.5 sm:p-2 hover:text-emerald-600 hover:bg-slate-50 transition rounded-l-lg border-r border-slate-200" title="Reduzir Zoom">
+          <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg>
+        </button>
+        <span id="zoom-level" class="px-2 sm:px-3 text-[10px] sm:text-xs font-bold w-10 sm:w-12 text-center cursor-pointer hover:text-emerald-600" onclick="resetZoom()" title="Restaurar Zoom (Ctrl + Scroll)">100%</span>
+        <button onclick="zoomIn()" class="p-1.5 sm:p-2 hover:text-emerald-600 hover:bg-slate-50 transition rounded-r-lg border-l border-slate-200" title="Aumentar Zoom">
+          <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- WRAPPER PARA O CORPO -->
+  <div class="flex flex-1 overflow-hidden w-full relative">
+
+    <aside id="sidebar" class="w-full sm:w-80 fixed sm:relative bg-white border-r border-slate-200 flex-col h-full shadow-lg z-40 flex-shrink-0 transition-all duration-300 hidden">
+      <div class="p-6 border-b border-slate-100 relative">
+        <button onclick="toggleSidebar()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-700">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+        <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2 mt-2">
+          <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+          Gerir Cargos
+        </h2>
+        <p class="text-xs text-slate-500 mt-1">Sincronizado automaticamente com o Google Sheets.</p>
+      </div>
+
+      <div class="p-6 overflow-y-auto flex-1">
+        <form id="addNodeForm" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">Nome da Pessoa</label>
+            <input type="text" id="nome" required placeholder="Ex: João Victor" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">Setor / Função principal</label>
+            <input type="text" id="cargo" required placeholder="Ex: Compras" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">
+              Empresa / Unidade <span class="text-slate-400 normal-case font-normal">(Use vírgula)</span>
+            </label>
+            <input type="text" id="empresa" list="empresas-list" placeholder="Ex: SPG Sede, SPG Oásis" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition">
+            <datalist id="empresas-list">
+              <option value="SPG Sede"></option>
+              <option value="SPG Oásis"></option>
+              <option value="SPG Estufa"></option>
+            </datalist>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">Subtítulo (Opcional)</label>
+            <input type="text" id="subtitulo" placeholder="Ex: Auxiliar Administrativo" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">
+              Responde a quem? <span class="text-slate-400 normal-case font-normal">(Segure Ctrl para vários)</span>
+            </label>
+            <input type="text" id="searchParent" placeholder="Pesquisar líder por nome..." class="w-full px-3 py-2 mb-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition">
+            <select id="parentId" multiple class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition h-28">
+              <option value="">Ninguém (Topo da Hierarquia)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">Cor do Departamento</label>
+            <select id="tema" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition">
+              <option value="red">Vermelho (Gerente Geral)</option>
+              <option value="indigo">Índigo (Diretores)</option>
+              <option value="yellow">Amarelo (Sub-Gerente)</option>
+              <option value="purple">Roxo (Líder)</option>
+              <option value="teal">Verde-azulado (Auxiliar)</option>
+              <option value="rose">Preto e Dourado (Conselheiro)</option>
+              <option value="green">Verde (Direção/Campo)</option>
+              <option value="blue">Azul (Gestão/TI)</option>
+              <option value="orange">Laranja (Administrativo)</option>
+              <option value="slate">Cinza (Vigias)</option>
+              <option value="cyan">Ciano (Auxiliar de Produção)</option>
+              <option value="violet">Violeta (Líder de Produção)</option>
+            </select>
+          </div>
+          
+          <div class="mt-4 bg-slate-50 p-3 rounded-lg border border-slate-200">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" id="agrupar" class="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer">
+              <span class="text-xs font-bold text-slate-700 uppercase tracking-wider">Liderança Conjunta</span>
+            </label>
+            <p class="text-[10px] text-slate-500 mt-1 ml-6 leading-tight">Marque para unir este cargo lado a lado com colegas da mesma função e dividir os subordinados.</p>
+          </div>
+
+          <div class="flex gap-2 mt-4">
+            <button type="submit" id="submitBtn" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2.5 rounded-lg text-sm transition-colors">
+              Adicionar Cargo
+            </button>
+            <button type="button" id="cancelEditBtn" onclick="cancelEdit()" class="hidden px-4 bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium py-2.5 rounded-lg text-sm transition-colors">
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </div>
+    </aside>
+
+    <main id="main-content" class="flex-1 overflow-auto p-4 sm:p-12 relative block pt-8 sm:pt-10 cursor-grab">
+      <div class="tree mt-2 transition-transform duration-300 origin-top w-max min-w-full mx-auto px-4 sm:px-10 pb-20 flex justify-center" id="tree-container"></div>
+    </main>
+
+  </div>
+
+  <script>
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxEEVCbWlLFJg_ATwZvzvFQQxE0qAiOEZILNfiD2JHtsXmzseX1vCkfyVCcj737exA5/exec"; 
+    
+    let isLogged = false;
+    let savedPassword = ""; 
+    
+    let orgData = [];
+    let currentZoom = 1.0;
+    let collapsedNodes = new Set(); 
+
+    const themes = {
+      green: { bg: 'bg-emerald-100', text: 'text-emerald-700', ring: 'ring-emerald-100' },
+      blue: { bg: 'bg-sky-100', text: 'text-sky-700', ring: 'ring-sky-100' },
+      orange: { bg: 'bg-amber-100', text: 'text-amber-700', ring: 'ring-amber-100' },
+      purple: { bg: 'bg-purple-100', text: 'text-purple-700', ring: 'ring-purple-100' },
+      teal: { bg: 'bg-teal-100', text: 'text-teal-700', ring: 'ring-teal-100' },
+      rose: { bg: 'bg-slate-900', text: 'text-yellow-400', ring: 'ring-slate-900' },
+      indigo: { bg: 'bg-indigo-100', text: 'text-indigo-700', ring: 'ring-indigo-100' },
+      red: { bg: 'bg-red-100', text: 'text-red-700', ring: 'ring-red-100' },
+      yellow: { bg: 'bg-yellow-100', text: 'text-yellow-800', ring: 'ring-yellow-100' },
+      slate: { bg: 'bg-slate-100', text: 'text-slate-700', ring: 'ring-slate-100' },
+      cyan: { bg: 'bg-cyan-100', text: 'text-cyan-700', ring: 'ring-cyan-100' },
+      violet: { bg: 'bg-violet-100', text: 'text-violet-700', ring: 'ring-violet-100' }
+    };
+
+    function showLoading(show, message = "A processar...") {
+      const loader = document.getElementById('loading');
+      document.getElementById('loading-text').textContent = message;
+      loader.className = show 
+        ? "fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center active" 
+        : "hidden";
+    }
+
+    function handleLoginClick() {
+      if (isLogged) {
+        toggleSidebar(); 
+      } else {
+        document.getElementById('login-modal').classList.remove('hidden');
+        document.getElementById('login-modal').classList.add('flex');
+        document.getElementById('senha-input').value = "";
+        document.getElementById('senha-input').focus();
+      }
+    }
+
+    function fecharLoginModal() {
+      document.getElementById('login-modal').classList.add('hidden');
+      document.getElementById('login-modal').classList.remove('flex');
+    }
+
+    function abrirStatsModal() {
+      document.getElementById('stats-modal').classList.remove('hidden');
+      document.getElementById('stats-modal').classList.add('flex');
+      gerarEstatisticas();
+    }
+
+    function fecharStatsModal() {
+      document.getElementById('stats-modal').classList.add('hidden');
+      document.getElementById('stats-modal').classList.remove('flex');
+    }
+
+    window.toggleAccordion = function(empresaId) {
+      const content = document.getElementById(`content-${empresaId}`);
+      const icon = document.getElementById(`icon-${empresaId}`);
+      if (content.classList.contains('hidden')) {
+        content.classList.remove('hidden');
+        icon.classList.add('rotate-180');
+      } else {
+        content.classList.add('hidden');
+        icon.classList.remove('rotate-180');
+      }
+    };
+
+    async function fazerLogin() {
+      const senhaDigitada = document.getElementById('senha-input').value;
+      if (!senhaDigitada) return;
+
+      showLoading(true, "A validar credenciais...");
+      try {
+        const response = await fetch(SCRIPT_URL, {
+          method: "POST",
+          body: JSON.stringify({ action: "LOGIN", password: senhaDigitada }),
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          redirect: "follow"
+        });
+        const result = await response.json();
+
+        if (result.success) {
+          isLogged = true;
+          savedPassword = senhaDigitada;
+          fecharLoginModal();
+          
+          document.getElementById('texto-acesso').textContent = "Painel de Cargos";
+          document.getElementById('icone-acesso').innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>';
+          
+          toggleSidebar();
+          renderApp();
+        } else {
+          customAlert(result.error || "Palavra-passe incorreta. Tente novamente.", "Acesso Negado");
+        }
+      } catch (error) {
+        console.error("Erro no login:", error);
+        customAlert("Ocorreu um erro ao comunicar com a base de dados.", "Erro");
+      }
+      showLoading(false);
+    }
+
+    document.getElementById('senha-input').addEventListener('keypress', function (e) {
+      if (e.key === 'Enter') fazerLogin();
+    });
+
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      if (sidebar.classList.contains('hidden')) {
+        sidebar.classList.remove('hidden');
+        sidebar.classList.add('flex');
+      } else {
+        sidebar.classList.add('hidden');
+        sidebar.classList.remove('flex');
+      }
+    }
+
+    function zoomIn() { if (currentZoom < 2.0) { currentZoom += 0.1; applyZoom(); } }
+    function zoomOut() { if (currentZoom > 0.2) { currentZoom -= 0.1; applyZoom(); } }
+    function resetZoom() { currentZoom = 1.0; applyZoom(); }
+
+    function applyZoom() {
+      const tree = document.getElementById('tree-container');
+      const zoomText = document.getElementById('zoom-level');
+      tree.style.transform = `scale(${currentZoom})`;
+      zoomText.textContent = Math.round(currentZoom * 100) + '%';
+    }
+
+    function showModalUI({ title, message, type = 'alert' }) {
+      return new Promise((resolve) => {
+        const modal = document.getElementById('custom-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalMessage = document.getElementById('modal-message');
+        const btnCancel = document.getElementById('modal-btn-cancel');
+        const btnConfirm = document.getElementById('modal-btn-confirm');
+        const btnOk = document.getElementById('modal-btn-ok');
+
+        modalTitle.textContent = title;
+        modalMessage.textContent = message;
+
+        btnCancel.classList.add('hidden');
+        btnConfirm.classList.add('hidden');
+        btnOk.classList.add('hidden');
+
+        const newBtnCancel = btnCancel.cloneNode(true);
+        const newBtnConfirm = btnConfirm.cloneNode(true);
+        const newBtnOk = btnOk.cloneNode(true);
+        btnCancel.replaceWith(newBtnCancel);
+        btnConfirm.replaceWith(newBtnConfirm);
+        btnOk.replaceWith(newBtnOk);
+
+        const closeModal = () => {
+          modal.classList.add('hidden');
+          modal.classList.remove('flex');
+        };
+
+        if (type === 'confirm') {
+          newBtnCancel.classList.remove('hidden');
+          newBtnConfirm.classList.remove('hidden');
+          newBtnCancel.onclick = () => { closeModal(); resolve(false); };
+          newBtnConfirm.onclick = () => { closeModal(); resolve(true); };
+        } else {
+          newBtnOk.classList.remove('hidden');
+          newBtnOk.onclick = () => { closeModal(); resolve(true); };
+        }
+
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      });
+    }
+
+    async function customAlert(message, title = 'Aviso') {
+      await showModalUI({ title, message, type: 'alert' });
+    }
+
+    async function customConfirm(message, title = 'Confirmação') {
+      return await showModalUI({ title, message, type: 'confirm' });
+    }
+
+    function getPrimaryParent(node) {
+      if (!node.parent) return null;
+      const parts = String(node.parent).split(',');
+      return parseInt(parts[0]);
+    }
+
+    function getSecondaryParentsHtml(node) {
+      if (!node.parent) return '';
+      const parts = String(node.parent).split(',');
+      if (parts.length <= 1) return ''; 
+      
+      const secondaryIds = parts.slice(1).map(id => parseInt(id));
+      const secondaryNames = secondaryIds.map(id => {
+        const pNode = orgData.find(n => n.id === id);
+        return pNode ? pNode.name : 'Desconhecido';
+      }).filter(Boolean).join(', ');
+
+      if (!secondaryNames) return '';
+
+      return `
+        <div class="text-[9px] text-slate-400 mt-3 border-t border-slate-100 pt-2 w-full text-center leading-tight">
+          Também responde a:<br/><span class="font-semibold text-slate-500">${secondaryNames}</span>
+        </div>
+      `;
+    }
+
+    // ==========================================
+    // LÓGICA DE CONTAGEM E ESTATÍSTICAS
+    // ==========================================
+    function contarCascataSubordinados(liderId) {
+      let count = 0;
+      const children = orgData.filter(n => getPrimaryParent(n) === liderId);
+      
+      count += children.length;
+      
+      children.forEach(child => {
+        count += contarCascataSubordinados(child.id);
+      });
+      
+      return count;
+    }
+
+    function gerarEstatisticas() {
+      const statsList = document.getElementById('stats-list');
+      const totalColab = document.getElementById('total-colab');
+      
+      totalColab.textContent = orgData.length;
+      
+      // Objeto para agrupar por empresa
+      const orgPorEmpresa = {};
+
+      orgData.forEach(node => {
+        // Tratar nós sem empresa ou com várias empresas
+        const empresas = node.empresa 
+          ? node.empresa.split(',').map(e => e.trim()).filter(e => e.length > 0)
+          : ['Sem Local Definido'];
+
+        // Adicionar o nó a cada empresa a que pertence
+        empresas.forEach(emp => {
+          if (!orgPorEmpresa[emp]) {
+            orgPorEmpresa[emp] = [];
+          }
+          orgPorEmpresa[emp].push(node);
+        });
+      });
+
+      // Ordenar as empresas alfabeticamente, colocando "Sem Local Definido" no fim
+      const empresasOrdenadas = Object.keys(orgPorEmpresa).sort((a, b) => {
+        if (a === 'Sem Local Definido') return 1;
+        if (b === 'Sem Local Definido') return -1;
+        return a.localeCompare(b);
+      });
+
+      let html = '';
+      
+      empresasOrdenadas.forEach((empresa, index) => {
+        const pessoas = orgPorEmpresa[empresa];
+        // Ordenar pessoas dentro da empresa por nome
+        pessoas.sort((a, b) => a.name.localeCompare(b.name));
+
+        const empresaId = `empresa-${index}`;
+
+        html += `
+          <div class="border-b border-slate-100 last:border-0">
+            <button onclick="toggleAccordion('${empresaId}')" class="w-full flex justify-between items-center p-4 bg-white hover:bg-slate-50 transition-colors text-left">
+              <div class="flex items-center gap-3">
+                <div class="bg-emerald-100 text-emerald-700 p-2 rounded-lg">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                </div>
+                <div>
+                  <h4 class="font-bold text-slate-800 text-sm">${empresa}</h4>
+                  <p class="text-xs text-slate-500">${pessoas.length} ${pessoas.length === 1 ? 'pessoa' : 'pessoas'}</p>
+                </div>
+              </div>
+              <svg id="icon-${empresaId}" class="w-5 h-5 text-slate-400 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+            </button>
+            
+            <div id="content-${empresaId}" class="hidden bg-slate-50 px-4 py-2 border-t border-slate-100 shadow-inner">
+              <ul class="space-y-2 py-2">
+        `;
+
+        pessoas.forEach(pessoa => {
+          const theme = themes[pessoa.theme] || themes.blue;
+          html += `
+            <li class="flex justify-between items-center bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
+              <div class="flex flex-col">
+                <span class="font-semibold text-slate-800 text-sm">${pessoa.name}</span>
+                <span class="text-xs text-slate-500">${pessoa.sub || ''}</span>
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${theme.bg} ${theme.text}">
+                ${pessoa.title}
+              </span>
+            </li>
+          `;
+        });
+
+        html += `
+              </ul>
+            </div>
+          </div>
+        `;
+      });
+
+      if (empresasOrdenadas.length === 0) {
+         html = `<div class="p-6 text-center text-slate-500 text-sm">Ainda não existem colaboradores registados.</div>`;
+      }
+
+      statsList.innerHTML = html;
+    }
+
+    async function carregarDados() {
+      showLoading(true, "A carregar Estrutura...");
+      try {
+        const response = await fetch(SCRIPT_URL, {
+          method: "GET",
+          redirect: "follow"
+        });
+        const data = await response.json();
+        
+        if (Array.isArray(data)) {
+          orgData = data;
+          
+          collapsedNodes = new Set();
+          orgData.forEach(node => {
+            const hasChildren = orgData.some(n => getPrimaryParent(n) === node.id);
+            if (hasChildren) {
+              collapsedNodes.add(node.id);
+            }
+          });
+
+        } else if (data && data.error) {
+          console.error("Erro da API:", data.error);
+          await customAlert("Erro retornado: " + data.error + "\nVerifique se a aba na planilha se chama exatamente 'Organograma'.", "Erro na Planilha");
+          orgData = [];
+        }
+        
+        renderApp();
+      } catch (error) {
+        console.error("Erro ao carregar dados:", error);
+        if (error.message === "Failed to fetch") {
+          await customAlert("O navegador bloqueou o acesso à planilha.\n\nPara resolver:\n1. Vá no Google Apps Script\n2. Clique em 'Implantar' > 'Nova implantação'\n3. Em 'Quem tem acesso', mude para 'Qualquer pessoa'\n4. Atualize a SCRIPT_URL.", "Erro de Ligação");
+        } else {
+          await customAlert("Erro ao comunicar com a base de dados: " + error.message, "Erro de Ligação");
+        }
+        orgData = [];
+        renderApp();
+      }
+      showLoading(false);
+    }
+
+    async function salvarNaPlanilha(payload) {
+      payload.password = savedPassword;
+      
+      try {
+        const response = await fetch(SCRIPT_URL, {
+          method: "POST",
+          body: JSON.stringify(payload),
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          redirect: "follow"
+        });
+        const result = await response.json();
+        
+        if (!result.success) {
+          await customAlert(result.error || "Operação não autorizada.", "Erro ao Guardar");
+          carregarDados();
+        }
+      } catch (error) {
+        console.error("Erro ao guardar:", error);
+        if (error.message === "Failed to fetch") {
+          await customAlert("Falha ao guardar (Erro de CORS). Verifique as configurações do Apps Script.", "Erro ao Guardar");
+        }
+      }
+    }
+
+    window.toggleCollapse = function(id) {
+      if (collapsedNodes.has(id)) {
+        collapsedNodes.delete(id);
+      } else {
+        collapsedNodes.add(id);
+      }
+      renderApp();
+    };
+
+    function createNodeCard(node) {
+      const theme = themes[node.theme] || themes.blue;
+      
+      // Conta as pessoas que respondem direta e indiretamente a este nó
+      const qtdEquipa = contarCascataSubordinados(node.id);
+      let equipaBadgeHtml = '';
+      if (qtdEquipa > 0) {
+        equipaBadgeHtml = `
+          <div class="absolute -top-3 -right-2 bg-slate-800 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-md border-2 border-white flex items-center gap-1 z-30 pointer-events-none" title="Tamanho da Equipa: ${qtdEquipa}">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+            ${qtdEquipa}
+          </div>
+        `;
+      }
+
+      let empresasHtml = '';
+      if (node.empresa) {
+        const empresasArray = node.empresa.split(',').map(e => e.trim()).filter(e => e.length > 0);
+        if (empresasArray.length > 0) {
+          empresasHtml = `
+            <div class="absolute -top-3 flex flex-wrap justify-center gap-1 w-full px-2 z-20 pointer-events-none">
+              ${empresasArray.map(emp => `<div class="bg-slate-100 text-slate-600 text-[9px] font-bold px-2.5 py-0.5 rounded-full shadow-sm border border-slate-200 whitespace-nowrap">${emp}</div>`).join('')}
+            </div>
+          `;
+        }
+      }
+
+      const actionButtonsHtml = isLogged ? `
+        <div class="absolute top-2 right-2 flex gap-1 opacity-0 group-hover/card:opacity-100 transition-opacity z-30">
+          <button onclick="editNode(${node.id})" class="text-slate-300 hover:text-blue-500 bg-white/80 rounded" title="Editar cargo">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+          </button>
+          <button onclick="removeNode(${node.id})" class="text-slate-300 hover:text-red-500 bg-white/80 rounded" title="Remover cargo">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+          </button>
+        </div>
+      ` : '';
+
+      return `
+        <div class="relative inline-flex flex-col items-center w-full bg-white rounded-2xl shadow-sm border border-slate-100 p-4 z-10 hover:shadow-lg transition-all duration-300 group/card">
+          ${equipaBadgeHtml}
+          ${empresasHtml}
+          ${actionButtonsHtml}
+          <div class="font-semibold text-[10px] tracking-wider uppercase px-2.5 py-1 rounded-full mb-2 min-w-[60px] text-center ${theme.bg} ${theme.text}">${node.title}</div>
+          <div class="text-sm font-bold text-slate-800 text-center w-full truncate" title="${node.name}">${node.name}</div>
+          ${node.sub ? `<div class="text-xs text-slate-500 text-center w-full mt-1 font-medium truncate" title="${node.sub}">${node.sub}</div>` : ''}
+          ${getSecondaryParentsHtml(node)}
+        </div>
+      `;
+    }
+
+    function renderGroup(nodesInGroup) {
+      const groupId = nodesInGroup[0].id;
+      
+      const children = orgData.filter(n => {
+          const primary = getPrimaryParent(n);
+          return nodesInGroup.some(gNode => gNode.id === primary);
+      });
+      const hasChildren = children.length > 0;
+      const isCollapsed = collapsedNodes.has(groupId);
+      const isMulti = nodesInGroup.length > 1;
+
+      const lineWidth = (nodesInGroup.length - 1) * 13.5;
+
+      let cardsHtml = `<div class="relative flex gap-6 justify-center ${isMulti ? 'pt-6 pb-6' : 'mt-3 mb-4'} group/group">`;
+      
+      if (isMulti) {
+          cardsHtml += `<div class="absolute top-0 left-1/2 -translate-x-1/2 h-0 border-t-2 border-[#cbd5e1]" style="width: ${lineWidth}rem;"></div>`;
+          if (hasChildren && !isCollapsed) {
+              cardsHtml += `<div class="absolute bottom-0 left-1/2 -translate-x-1/2 h-0 border-b-2 border-[#cbd5e1]" style="width: ${lineWidth}rem;"></div>`;
+          }
+      }
+
+      cardsHtml += nodesInGroup.map(n => {
+          let card = createNodeCard(n);
+          let wrapper = `<div class="relative w-48">`;
+          if (isMulti) {
+              wrapper += `<div class="absolute top-[-24px] left-1/2 w-0 h-6 border-l-2 border-[#cbd5e1]"></div>`;
+              if (hasChildren && !isCollapsed) {
+                  wrapper += `<div class="absolute bottom-[-24px] left-1/2 w-0 h-6 border-l-2 border-[#cbd5e1]"></div>`;
+              }
+          }
+          wrapper += card;
+          wrapper += `</div>`;
+          return wrapper;
+      }).join('');
+      
+      if (hasChildren) {
+          cardsHtml += `
+              <button onclick="toggleCollapse(${groupId})" class="absolute ${isMulti ? '-bottom-3' : '-bottom-3'} left-1/2 -translate-x-1/2 bg-white border border-slate-200 rounded-full w-6 h-6 flex items-center justify-center shadow-sm text-slate-500 hover:text-emerald-600 hover:border-emerald-200 z-30 transition-all hover:scale-110" title="${isCollapsed ? 'Mostrar subordinados' : 'Ocultar subordinados'}">
+                <svg class="w-4 h-4 transition-transform duration-300 ${isCollapsed ? '' : 'rotate-180'}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+              </button>
+          `;
+      }
+      cardsHtml += `</div>`;
+
+      let childrenHtml = '';
+      if (hasChildren && !isCollapsed) {
+          const subGroups = [];
+          const processedIds = new Set();
+          
+          children.forEach(child => {
+              if (processedIds.has(child.id)) return;
+              
+              if (child.grouped) { 
+                  const siblings = children.filter(c => c.grouped && c.title === child.title);
+                  subGroups.push(siblings);
+                  siblings.forEach(s => processedIds.add(s.id));
+              } else {
+                  subGroups.push([child]);
+                  processedIds.add(child.id);
+              }
+          });
+          
+          childrenHtml = `<ul>${subGroups.map(grp => renderGroup(grp)).join('')}</ul>`;
+      }
+
+      return `<li>${cardsHtml}${childrenHtml}</li>`;
+    }
+
+    function updateSelectOptions() {
+      const select = document.getElementById('parentId');
+      select.innerHTML = '<option value="">Ninguém (Topo da Hierarquia)</option>';
+      orgData.forEach(node => {
+        const option = document.createElement('option');
+        option.value = node.id;
+        option.textContent = `${node.name} (${node.title})`;
+        select.appendChild(option);
+      });
+      
+      const searchParentInput = document.getElementById('searchParent');
+      if (searchParentInput) {
+        searchParentInput.dispatchEvent(new Event('input'));
+      }
+    }
+
+    function renderApp() {
+      const rootNodes = orgData.filter(n => {
+        const p = getPrimaryParent(n);
+        return p === null || isNaN(p);
+      });
+      
+      const container = document.getElementById('tree-container');
+      
+      if (rootNodes.length > 0) {
+        const subGroups = [];
+        const processedIds = new Set();
+        
+        rootNodes.forEach(child => {
+            if (processedIds.has(child.id)) return;
+            if (child.grouped) {
+                const siblings = rootNodes.filter(c => c.grouped && c.title === child.title);
+                subGroups.push(siblings);
+                siblings.forEach(s => processedIds.add(s.id));
+            } else {
+                subGroups.push([child]);
+                processedIds.add(child.id);
+            }
+        });
+
+        container.innerHTML = `<ul>${subGroups.map(grp => renderGroup(grp)).join('')}</ul>`;
+      } else {
+        container.innerHTML = `<p class="text-slate-400 mt-20">Organograma vazio. Inicie sessão e adicione um cargo para começar.</p>`;
+      }
+      updateSelectOptions();
+    }
+
+    let editingNodeId = null;
+
+    window.editNode = function(id) {
+      if(!isLogged) return;
+      const node = orgData.find(n => n.id === id);
+      if (!node) return;
+
+      editingNodeId = id;
+      document.getElementById('nome').value = node.name;
+      document.getElementById('cargo').value = node.title;
+      document.getElementById('empresa').value = node.empresa || "";
+      document.getElementById('subtitulo').value = node.sub || "";
+      document.getElementById('tema').value = node.theme;
+      
+      document.getElementById('agrupar').checked = node.grouped || false;
+
+      const parentSelect = document.getElementById('parentId');
+      const parentsArray = node.parent ? String(node.parent).split(',') : [];
+      Array.from(parentSelect.options).forEach(opt => {
+        opt.selected = parentsArray.includes(opt.value);
+      });
+
+      const btn = document.getElementById('submitBtn');
+      btn.textContent = "Guardar Alterações";
+      btn.classList.replace('bg-emerald-600', 'bg-blue-600');
+      btn.classList.replace('hover:bg-emerald-700', 'hover:bg-blue-700');
+      document.getElementById('cancelEditBtn').classList.remove('hidden');
+      
+      const sidebar = document.getElementById('sidebar');
+      if (sidebar.classList.contains('hidden')) toggleSidebar();
+    };
+
+    window.cancelEdit = function() {
+      editingNodeId = null;
+      document.getElementById('addNodeForm').reset();
+      document.getElementById('agrupar').checked = false; 
+      
+      const searchParentInput = document.getElementById('searchParent');
+      if (searchParentInput) {
+        searchParentInput.value = ""; 
+        searchParentInput.dispatchEvent(new Event('input')); 
+      }
+      
+      const btn = document.getElementById('submitBtn');
+      btn.textContent = "Adicionar Cargo";
+      btn.classList.replace('bg-blue-600', 'bg-emerald-600');
+      btn.classList.replace('hover:bg-blue-700', 'hover:bg-emerald-700');
+      document.getElementById('cancelEditBtn').classList.add('hidden');
+    };
+
+    document.getElementById('addNodeForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      if(!isLogged) {
+        customAlert("Não tem permissões. Inicie sessão primeiro.", "Acesso Negado");
+        return;
+      }
+      
+      const parentSelect = document.getElementById('parentId');
+      const selectedOptions = Array.from(parentSelect.selectedOptions).map(opt => opt.value).filter(val => val !== "");
+      const parentVal = selectedOptions.length > 0 ? selectedOptions.join(',') : null;
+      
+      const newNode = {
+        id: editingNodeId ? editingNodeId : Date.now(),
+        name: document.getElementById('nome').value,
+        title: document.getElementById('cargo').value,
+        sub: document.getElementById('subtitulo').value,
+        parent: parentVal,
+        theme: document.getElementById('tema').value,
+        empresa: document.getElementById('empresa').value,
+        grouped: document.getElementById('agrupar').checked
+      };
+
+      if (editingNodeId) {
+        const index = orgData.findIndex(n => n.id === editingNodeId);
+        if (index !== -1) orgData[index] = newNode;
+        renderApp();
+        cancelEdit();
+        
+        showLoading(true);
+        await salvarNaPlanilha({ action: "EDIT", node: newNode });
+        showLoading(false);
+      } else {
+        orgData.push(newNode);
+        renderApp();
+        this.reset();
+        
+        showLoading(true);
+        await salvarNaPlanilha({ action: "ADD", node: newNode });
+        showLoading(false);
+      }
+    });
+
+    window.removeNode = async function(id) {
+      if(!isLogged) return;
+      const confirmed = await customConfirm("Tem a certeza de que deseja remover este cargo e todos os seus subordinados diretos?");
+      if(!confirmed) return;
+
+      const idsToRemove = [id];
+      function findChildren(parentId) {
+        const children = orgData.filter(n => getPrimaryParent(n) === parentId);
+        children.forEach(c => { idsToRemove.push(c.id); findChildren(c.id); });
+      }
+      findChildren(id);
+
+      orgData = orgData.filter(n => !idsToRemove.includes(n.id));
+      renderApp();
+
+      showLoading(true);
+      await salvarNaPlanilha({ action: "DELETE", ids: idsToRemove });
+      showLoading(false);
+    };
+
+    document.addEventListener("DOMContentLoaded", () => {
+      carregarDados();
+
+      // Verificação de segurança: certifica-se de que o elemento searchParent existe no DOM antes de escutar
+      const searchParentInput = document.getElementById('searchParent');
+      if (searchParentInput) {
+        searchParentInput.addEventListener('input', function(e) {
+          const term = e.target.value.toLowerCase();
+          const select = document.getElementById('parentId');
+          if(select) {
+            Array.from(select.options).forEach(opt => {
+              if(opt.value === "") return; 
+              opt.style.display = opt.textContent.toLowerCase().includes(term) ? 'block' : 'none';
+            });
+          }
+        });
+      }
+
+      const mainContent = document.getElementById('main-content');
+      if (!mainContent) return; // Segurança extra
+
+      mainContent.addEventListener('contextmenu', (e) => {
+        if (!e.target.closest('button') && !e.target.closest('input') && !e.target.closest('textarea')) {
+          e.preventDefault();
+        }
+      });
+
+      mainContent.addEventListener('wheel', function(e) {
+        if (e.ctrlKey || e.metaKey) {
+          e.preventDefault(); 
+          if (e.deltaY < 0) {
+            zoomIn();
+          } else {
+            zoomOut();
+          }
+        }
+      }, { passive: false });
+
+      let isDragging = false;
+      let startX, startY, scrollLeft, scrollTop;
+
+      mainContent.addEventListener('mousedown', (e) => {
+        if (e.target.closest('button')) return;
+        isDragging = true;
+        mainContent.classList.add('grabbing');
+        startX = e.pageX - mainContent.offsetLeft;
+        startY = e.pageY - mainContent.offsetTop;
+        scrollLeft = mainContent.scrollLeft;
+        scrollTop = mainContent.scrollTop;
+      });
+
+      mainContent.addEventListener('mouseleave', () => {
+        isDragging = false;
+        mainContent.classList.remove('grabbing');
+      });
+
+      mainContent.addEventListener('mouseup', () => {
+        isDragging = false;
+        mainContent.classList.remove('grabbing');
+      });
+
+      mainContent.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        e.preventDefault(); 
+        const x = e.pageX - mainContent.offsetLeft;
+        const y = e.pageY - mainContent.offsetTop;
+        const walkX = (x - startX) * 1;
+        const walkY = (y - startY) * 1;
+        mainContent.scrollLeft = scrollLeft - walkX;
+        mainContent.scrollTop = scrollTop - walkY;
+      });
+
+      let initialPinchDistance = null;
+
+      mainContent.addEventListener('touchstart', (e) => {
+        if (e.target.closest('button')) return;
+        
+        if (e.touches.length === 1) {
+          isDragging = true;
+          startX = e.touches[0].pageX - mainContent.offsetLeft;
+          startY = e.touches[0].pageY - mainContent.offsetTop;
+          scrollLeft = mainContent.scrollLeft;
+          scrollTop = mainContent.scrollTop;
+        } else if (e.touches.length === 2) {
+          isDragging = false; 
+          initialPinchDistance = Math.hypot(
+            e.touches[0].pageX - e.touches[1].pageX,
+            e.touches[0].pageY - e.touches[1].pageY
+          );
+        }
+      }, { passive: true });
+
+      mainContent.addEventListener('touchend', () => {
+        isDragging = false;
+        initialPinchDistance = null;
+      });
+
+      mainContent.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 1 && isDragging) {
+          const x = e.touches[0].pageX - mainContent.offsetLeft;
+          const y = e.touches[0].pageY - mainContent.offsetTop;
+          const walkX = (x - startX) * 1;
+          const walkY = (y - startY) * 1;
+          mainContent.scrollLeft = scrollLeft - walkX;
+          mainContent.scrollTop = scrollTop - walkY;
+        } else if (e.touches.length === 2 && initialPinchDistance !== null) {
+          const currentDistance = Math.hypot(
+            e.touches[0].pageX - e.touches[1].pageX,
+            e.touches[0].pageY - e.touches[1].pageY
+          );
+          const zoomDelta = currentDistance - initialPinchDistance;
+
+          if (Math.abs(zoomDelta) > 5) {
+            currentZoom += zoomDelta * 0.005;
+            if (currentZoom > 2.0) currentZoom = 2.0;
+            if (currentZoom < 0.2) currentZoom = 0.2;
+            
+            applyZoom();
+            initialPinchDistance = currentDistance; 
+          }
+        }
+      }, { passive: true });
+    });
+  </script>
+</body>
+</html>
