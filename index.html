@@ -607,18 +607,18 @@
 
     function getPrimaryParent(node) {
       if (!node.parent) return null;
-      const parts = String(node.parent).split(',');
+      const parts = String(node.parent).split(/[,;]/);
       return parseInt(parts[0]);
     }
 
     function getSecondaryParentsHtml(node) {
       if (!node.parent) return '';
-      const parts = String(node.parent).split(',');
+      const parts = String(node.parent).split(/[,;]/);
       if (parts.length <= 1) return ''; 
       
-      const secondaryIds = parts.slice(1).map(id => parseInt(id));
+      const secondaryIds = parts.slice(1).map(id => String(id).trim());
       const secondaryNames = secondaryIds.map(id => {
-        const pNode = orgData.find(n => n.id === id);
+        const pNode = orgData.find(n => String(n.id) === id);
         return pNode ? pNode.name : 'Desconhecido';
       }).filter(Boolean).join(', ');
 
@@ -683,7 +683,7 @@
       orgData.forEach(node => {
         if (modo === 'empresa') {
           const chaves = node.empresa 
-            ? node.empresa.split(',').map(e => e.trim()).filter(e => e.length > 0)
+            ? node.empresa.split(/[,;]/).map(e => e.trim()).filter(e => e.length > 0)
             : ['Sem Local Definido'];
 
           chaves.forEach(chave => {
@@ -855,7 +855,7 @@
 
       let empresasHtml = '';
       if (!isCompact && node.empresa) {
-        const empresasArray = node.empresa.split(',').map(e => e.trim()).filter(e => e.length > 0);
+        const empresasArray = node.empresa.split(/[,;]/).map(e => e.trim()).filter(e => e.length > 0);
         if (empresasArray.length > 0) {
           empresasHtml = `
             <div class="absolute -top-3 flex flex-wrap justify-center gap-1 w-full px-2 z-20 pointer-events-none">
@@ -943,7 +943,7 @@
 
           // Agrupa os filhos pelas suas respetivas empresas
           children.forEach(child => {
-              const emp = child.empresa ? child.empresa.split(',')[0].trim() : '';
+              const emp = child.empresa ? child.empresa.split(/[,;]/)[0].trim() : '';
               if (emp !== '') hasAnyEmpresa = true;
               if (!groupedByEmpresa[emp]) groupedByEmpresa[emp] = [];
               groupedByEmpresa[emp].push(child);
@@ -1009,7 +1009,7 @@
 
       // Popular Empresas
       const empresasList = document.getElementById('empresas-list');
-      const existingEmpresas = [...new Set(orgData.map(n => n.empresa).filter(Boolean).flatMap(e => e.split(',').map(s => s.trim())))].filter(Boolean);
+      const existingEmpresas = [...new Set(orgData.map(n => n.empresa).filter(Boolean).flatMap(e => e.split(/[,;]/).map(s => s.trim())))].filter(Boolean);
       const baseEmpresas = ["SPG Sede", "SPG Oásis", "SPG Estufa"];
       const uniqueEmpresas = [...new Set([...baseEmpresas, ...existingEmpresas])].sort();
       if(empresasList) empresasList.innerHTML = uniqueEmpresas.map(emp => `<option value="${emp}"></option>`).join('');
@@ -1085,9 +1085,9 @@
       document.getElementById('agrupar').checked = node.grouped || false;
 
       // Preecher checkboxes baseando-se em node.parent
-      const parentsArray = node.parent ? String(node.parent).split(',') : [];
+      const parentsArray = node.parent ? String(node.parent).split(/[,;]/).map(p => p.trim()) : [];
       document.querySelectorAll('.parent-checkbox').forEach(cb => {
-        cb.checked = parentsArray.includes(cb.value);
+        cb.checked = parentsArray.includes(String(cb.value));
       });
 
       const btn = document.getElementById('submitBtn');
@@ -1131,7 +1131,7 @@
       // Pega todos os checkboxes marcados para a hierarquia
       const checkboxes = document.querySelectorAll('.parent-checkbox:checked');
       const selectedOptions = Array.from(checkboxes).map(cb => cb.value);
-      const parentVal = selectedOptions.length > 0 ? selectedOptions.join(',') : null;
+      const parentVal = selectedOptions.length > 0 ? selectedOptions.join(';') : null;
       
       const newNode = {
         id: editingNodeId ? editingNodeId : Date.now(),
