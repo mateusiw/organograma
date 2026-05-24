@@ -801,6 +801,14 @@
         collapsedNodes.add(id);
       }
       renderApp();
+
+      // Centraliza a tela suavemente no nó que acabou de ser expandido/recolhido
+      setTimeout(() => {
+        const el = document.getElementById(`card-${id}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+        }
+      }, 100);
     };
 
     function createNodeCard(node) {
